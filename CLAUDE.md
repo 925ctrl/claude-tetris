@@ -22,3 +22,17 @@ Three files: `index.html` (markup; loads `game.js` as a classic script at the en
 - Piece flow: `spawn()` → `collide()` checks → move/`tryRotate()` (rotation via `rotateCW` with wall kicks) → `softDrop()`/`hardDrop()` → `lockPiece()` → `merge()` + `clearLines()` → `spawn()`. `ghostY()` computes the landing row for the ghost piece.
 - Rendering is redrawn in full each frame (`draw()`, `drawGrid()`, `drawNext()`, `drawBlock()`); `updateHUD()` writes score/lines/level to the DOM.
 - Input is a single `keydown` listener at the bottom of `game.js`.
+
+## Commits y versionado
+
+Los commits siguen Conventional Commits (semantic release): `<tipo>(<scope opcional>): <descripción>`.
+
+| Tipo | Efecto en la versión |
+|------|----------------------|
+| `fix:`, `perf:` | patch (0.1.0 → 0.1.1) |
+| `feat:` | minor (0.1.0 → 0.2.0) |
+| `tipo!:` o footer `BREAKING CHANGE:` | major (0.1.0 → 1.0.0) |
+| `docs`, `style`, `refactor`, `test`, `build`, `ci`, `chore` | sin release |
+
+- Con squash merge, el título del PR debe seguir este formato (es el mensaje que llega a `main`).
+- `version.txt` contiene la versión actual y lo gestiona `.github/workflows/release.yml` en cada push a `main`: calcula la versión, hace commit `chore(release): vX.Y.Z`, crea el tag y el GitHub Release (notas redactadas por Claude Haiku). No editarlo a mano.
