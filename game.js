@@ -39,7 +39,8 @@ const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
-const themeToggle = document.getElementById('theme-toggle');
+const pauseBtn = document.getElementById('pause-btn');
+const themeToggle =document.getElementById('theme-toggle');
 
 let gridColor = '#22222e';
 
@@ -227,12 +228,22 @@ function endGame() {
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   overlay.classList.remove('hidden');
+  updatePauseBtn();
+}
+
+function updatePauseBtn() {
+  pauseBtn.textContent = paused ? '▶️' : '⏸️';
+  pauseBtn.setAttribute('aria-label', paused ? 'Reanudar' : 'Pausar');
+  pauseBtn.title = paused ? 'Reanudar' : 'Pausar';
+  pauseBtn.disabled = gameOver;
 }
 
 function togglePause() {
   if (gameOver) return;
   paused = !paused;
+  updatePauseBtn();
   if (!paused) {
+    overlay.classList.add('hidden');
     lastTime = performance.now();
     loop(lastTime);
   } else {
@@ -273,6 +284,7 @@ function init() {
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  updatePauseBtn();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
@@ -303,6 +315,11 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+
+pauseBtn.addEventListener('click', () => {
+  togglePause();
+  pauseBtn.blur(); // evita que Space/Enter reactiven el botón durante el juego
+});
 
 function applyTheme(theme, save) {
   document.documentElement.dataset.theme = theme;
