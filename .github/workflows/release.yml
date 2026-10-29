@@ -126,6 +126,6 @@ jobs:
           git add version.txt
           git commit -m "chore(release): v$VERSION [skip ci]"
           git tag "v$VERSION"
-          git push origin HEAD:main --follow-tags
+          git push origin HEAD:main "refs/tags/v$VERSION"
 
           gh release create "v$VERSION" --title "v$VERSION" --notes-file release.md
