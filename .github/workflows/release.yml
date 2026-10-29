@@ -18,10 +18,19 @@ jobs:
       id-token: write
 
     steps:
+      # Token de la GitHub App: tiene bypass de la protección de rama y de tags.
+      - name: Generar token de la GitHub App
+        id: app
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ steps.app.outputs.token }}
 
       - name: Calcular nueva versión
         id: bump
