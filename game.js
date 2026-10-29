@@ -41,6 +41,15 @@ const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const pauseBtn = document.getElementById('pause-btn');
 const themeToggle =document.getElementById('theme-toggle');
+const editUserBtn = document.getElementById('edit-user-btn');
+const userModal = document.getElementById('user-modal');
+const userForm = document.getElementById('user-form');
+const usernameInput = document.getElementById('username-input');
+const scoreboardEl = document.getElementById('scoreboard');
+
+const MAX_NAME = 12;
+const MAX_SCORES = 10;
+let modalOpen = false;
 
 let gridColor = '#22222e';
 
@@ -222,8 +231,64 @@ function drawNext() {
       drawBlock(nextCtx, offX + c, offY + r, shape[r][c], NB);
 }
 
+function getUsername() {
+  try { return (localStorage.getItem('username') || '').trim().slice(0, MAX_NAME); } catch (e) { return ''; }
+}
+
+function setUsername(name) {
+  name = name.trim().slice(0, MAX_NAME);
+  if (!name) return false;
+  try { localStorage.setItem('username', name); } catch (e) {}
+  return true;
+}
+
+function loadScores() {
+  try {
+    const data = JSON.parse(localStorage.getItem('scoreboard'));
+    if (!Array.isArray(data)) return [];
+    return data
+      .filter(e => e && typeof e.name === 'string' && typeof e.score === 'number' && Number.isFinite(e.score))
+      .slice(0, MAX_SCORES);
+  } catch (e) {
+    return [];
+  }
+}
+
+function addScore(name, value) {
+  if (!name || value < 1) return;
+  const scores = loadScores();
+  // Inserta antes del primer puntaje estrictamente menor: un empate queda debajo
+  let idx = scores.findIndex(e => e.score < value);
+  if (idx === -1) {
+    if (scores.length >= MAX_SCORES) return;
+    idx = scores.length;
+  }
+  scores.splice(idx, 0, { name, score: value });
+  try { localStorage.setItem('scoreboard', JSON.stringify(scores.slice(0, MAX_SCORES))); } catch (e) {}
+  renderScoreboard();
+}
+
+function renderScoreboard() {
+  scoreboardEl.textContent = '';
+  for (const e of loadScores()) {
+    const li = document.createElement('li');
+    li.textContent = `${e.name} - ${e.score}`;
+    scoreboardEl.appendChild(li);
+  }
+}
+
+function openUserModal(editing) {
+  modalOpen = true;
+  if (editing && !paused && !gameOver) togglePause();
+  usernameInput.value = editing ? getUsername() : '';
+  userModal.classList.remove('hidden');
+  usernameInput.focus();
+  usernameInput.select();
+}
+
 function endGame() {
   gameOver = true;
+  addScore(getUsername(), score);
   cancelAnimationFrame(animId);
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
@@ -290,6 +355,7 @@ function init() {
 }
 
 document.addEventListener('keydown', e => {
+  if (modalOpen) return;
   if (e.code === 'KeyP') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
@@ -321,6 +387,21 @@ pauseBtn.addEventListener('click', () => {
   pauseBtn.blur(); // evita que Space/Enter reactiven el botón durante el juego
 });
 
+userForm.addEventListener('submit', e => {
+  e.preventDefault();
+  if (!setUsername(usernameInput.value)) return;
+  const firstTime = !board;
+  modalOpen = false;
+  userModal.classList.add('hidden');
+  usernameInput.blur();
+  if (firstTime) init();
+});
+
+editUserBtn.addEventListener('click', () => {
+  openUserModal(true);
+  editUserBtn.blur();
+});
+
 function applyTheme(theme, save) {
   document.documentElement.dataset.theme = theme;
   gridColor = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim();
@@ -340,4 +421,7 @@ themeToggle.addEventListener('click', () => {
 
 applyTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark', false);
 
-init();
+renderScoreboard();
+
+if (getUsername()) init();
+else openUserModal(false);
