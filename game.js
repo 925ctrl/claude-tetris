@@ -13,6 +13,9 @@ const COLORS = [
   '#e57373', // Z - red
   '#7986cb', // J - indigo
   '#ffb74d', // L - orange
+  '#ef5350', // Bomba - rojo
+  '#ffee58', // Rayo (fila) - amarillo
+  '#40c4ff', // Rayo 2 (columna) - azul
 ];
 
 const PIECES = [
@@ -24,7 +27,16 @@ const PIECES = [
   [[5,5,0],[0,5,5],[0,0,0]],                  // Z
   [[6,0,0],[6,6,6],[0,0,0]],                  // J
   [[0,0,7],[7,7,7],[0,0,0]],                  // L
+  [[8]],                                       // Bomba
+  [[9]],                                       // Rayo (fila)
+  [[10]],                                      // Rayo 2 (columna)
 ];
+
+const BOMB = 8;
+const ROW_BOLT = 9;
+const COL_BOLT = 10;
+const POWERUP_CHANCE = 0.1;
+const POWERUP_CELL_SCORE = 10;
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
@@ -60,7 +72,9 @@ function createBoard() {
 }
 
 function randomPiece() {
-  const type = Math.floor(Math.random() * 7) + 1;
+  const type = Math.random() < POWERUP_CHANCE
+    ? BOMB + Math.floor(Math.random() * 3)
+    : Math.floor(Math.random() * 7) + 1;
   const shape = PIECES[type].map(row => [...row]);
   return { type, shape, x: Math.floor(COLS / 2) - Math.floor(shape[0].length / 2), y: 0 };
 }
@@ -148,9 +162,35 @@ function softDrop() {
   }
 }
 
+// Aplica el efecto del power-up en la celda donde aterrizó; no deja bloques.
+function applyPowerUp() {
+  const { x, y, type } = current;
+  let destroyed = 0;
+  const clearCell = (r, c) => {
+    if (board[r][c]) { board[r][c] = 0; destroyed++; }
+  };
+  if (type === BOMB) {
+    for (let r = Math.max(0, y - 1); r <= Math.min(ROWS - 1, y + 1); r++)
+      for (let c = Math.max(0, x - 1); c <= Math.min(COLS - 1, x + 1); c++)
+        clearCell(r, c);
+  } else if (type === ROW_BOLT) {
+    destroyed = board[y].filter(v => v !== 0).length;
+    board.splice(y, 1);
+    board.unshift(new Array(COLS).fill(0));
+  } else if (type === COL_BOLT) {
+    for (let r = 0; r < ROWS; r++) clearCell(r, x);
+  }
+  score += destroyed * POWERUP_CELL_SCORE * level;
+  updateHUD();
+}
+
 function lockPiece() {
-  merge();
-  clearLines();
+  if (current.type >= BOMB) {
+    applyPowerUp();
+  } else {
+    merge();
+    clearLines();
+  }
   spawn();
 }
 
@@ -178,7 +218,48 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
   // highlight
   context.fillStyle = 'rgba(255,255,255,0.12)';
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+  if (colorIndex >= BOMB) drawPowerUpIcon(context, x, y, colorIndex, size);
   context.globalAlpha = 1;
+}
+
+// Icono vectorial oscuro sobre el bloque (respeta el globalAlpha del ghost).
+function drawPowerUpIcon(context, x, y, colorIndex, size) {
+  const cx = x * size + size / 2;
+  const cy = y * size + size / 2;
+  const u = size / 30;
+  context.save();
+  context.translate(cx, cy);
+  context.scale(u, u);
+  context.fillStyle = 'rgba(15,15,23,0.85)';
+  context.strokeStyle = 'rgba(15,15,23,0.85)';
+  context.lineWidth = 2;
+  context.lineCap = 'round';
+  if (colorIndex === BOMB) {
+    context.beginPath();
+    context.arc(-1, 3, 8, 0, Math.PI * 2);
+    context.fill();
+    context.beginPath(); // mecha
+    context.moveTo(4, -3);
+    context.quadraticCurveTo(7, -7, 10, -8);
+    context.stroke();
+    context.fillStyle = 'rgba(255,255,255,0.85)'; // chispa y brillo
+    context.beginPath();
+    context.arc(10, -8, 2, 0, Math.PI * 2);
+    context.arc(-4, 0, 2, 0, Math.PI * 2);
+    context.fill();
+  } else {
+    if (colorIndex === COL_BOLT) context.rotate(Math.PI / 2);
+    context.beginPath(); // rayo en zigzag
+    context.moveTo(3, -11);
+    context.lineTo(-6, 2);
+    context.lineTo(-1, 2);
+    context.lineTo(-3, 11);
+    context.lineTo(6, -2);
+    context.lineTo(1, -2);
+    context.closePath();
+    context.fill();
+  }
+  context.restore();
 }
 
 function drawGrid() {
