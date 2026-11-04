@@ -222,6 +222,27 @@ body {
   border-radius: 4px;
 }
 
+#skin-select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+
+#skin-select:focus {
+  border-color: var(--accent);
+}
+
+/* Fondo de los canvas según la skin (para pausa / game over) */
+[data-skin="neon"] #board,
+[data-skin="neon"] #next-canvas {
+  background: #000;
+}
+
 /* ---- Controles ---- */
 .controls ul {
   list-style: none;
