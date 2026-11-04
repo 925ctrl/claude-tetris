@@ -312,7 +312,7 @@ kbd {
   padding-top: 4px;
 }
 
-#scoreboard {
+#scoreboard, .score-list {
   list-style: none;
   counter-reset: pos;
   min-height: 120px;
@@ -325,7 +325,7 @@ kbd {
   border-radius: 4px;
 }
 
-#scoreboard li {
+#scoreboard li, .score-list li {
   counter-increment: pos;
   font-family: 'Courier New', Courier, monospace;
   font-size: 12px;
@@ -336,9 +336,61 @@ kbd {
   text-overflow: ellipsis;
 }
 
-#scoreboard li::before {
+#scoreboard li::before, .score-list li::before {
   content: counter(pos) ". ";
   color: var(--label);
+}
+
+#scoreboard li.highlight, .score-list li.highlight {
+  color: var(--accent-text);
+  background: var(--accent);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+#scoreboard li.highlight::before, .score-list li.highlight::before {
+  color: inherit;
+}
+
+.score-list {
+  min-height: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  width: 200px;
+  gap: 3px;
+  text-align: left;
+  padding: 6px 8px;
+}
+
+.score-list.hidden,
+.reset-btn.hidden {
+  display: none;
+}
+
+#overlay-record {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+#overlay-record:empty {
+  display: none;
+}
+
+.reset-btn {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.reset-btn:hover {
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 /* ---- Modal de usuario ---- */
