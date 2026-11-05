@@ -51,6 +51,10 @@ const userForm = document.getElementById('user-form');
 const usernameInput = document.getElementById('username-input');
 const scoreboardEl = document.getElementById('scoreboard');
 const skinSelect = document.getElementById('skin-select');
+const overlayScoresEl = document.getElementById('overlay-scores');
+const overlayRecord = document.getElementById('overlay-record');
+const resetScoresBtn = document.getElementById('reset-scores-btn');
+const overlayResetBtn = document.getElementById('overlay-reset-btn');
 
 const MAX_NAME = 12;
 const MAX_SCORES = 10;
@@ -426,26 +430,35 @@ function loadScores() {
 }
 
 function addScore(name, value) {
-  if (!name || value < 1) return;
+  if (!name || value < 1) return -1;
   const scores = loadScores();
   // Inserta antes del primer puntaje estrictamente menor: un empate queda debajo
   let idx = scores.findIndex(e => e.score < value);
   if (idx === -1) {
-    if (scores.length >= MAX_SCORES) return;
+    if (scores.length >= MAX_SCORES) return -1;
     idx = scores.length;
   }
   scores.splice(idx, 0, { name, score: value });
   try { localStorage.setItem('scoreboard', JSON.stringify(scores.slice(0, MAX_SCORES))); } catch (e) {}
-  renderScoreboard();
+  return idx < MAX_SCORES ? idx : -1;
+}
+
+// Índice de la última entrada insertada (se resalta hasta que empiece otra partida)
+let highlightIdx = -1;
+
+function renderScores(el, highlight = -1) {
+  el.textContent = '';
+  loadScores().forEach((e, i) => {
+    const li = document.createElement('li');
+    li.textContent = `${e.name} - ${e.score}`;
+    if (i === highlight) li.className = 'highlight';
+    el.appendChild(li);
+  });
 }
 
 function renderScoreboard() {
-  scoreboardEl.textContent = '';
-  for (const e of loadScores()) {
-    const li = document.createElement('li');
-    li.textContent = `${e.name} - ${e.score}`;
-    scoreboardEl.appendChild(li);
-  }
+  renderScores(scoreboardEl, highlightIdx);
+  renderScores(overlayScoresEl, highlightIdx);
 }
 
 function calcDropInterval() {
@@ -469,6 +482,19 @@ for (let i = 1; i <= 10; i++) {
 nextStartLevel = loadStartLevel();
 startLevelSelect.value = nextStartLevel;
 
+function resetScores(btn) {
+  if (confirm('¿Resetear el scoreboard? Esta acción no se puede deshacer.')) {
+    try { localStorage.removeItem('scoreboard'); } catch (e) {}
+    highlightIdx = -1;
+    overlayRecord.textContent = '';
+    renderScoreboard();
+  }
+  btn.blur();
+}
+
+resetScoresBtn.addEventListener('click', () => resetScores(resetScoresBtn));
+overlayResetBtn.addEventListener('click', () => resetScores(overlayResetBtn));
+
 function openUserModal(editing) {
   modalOpen = true;
   if (editing && !paused && !gameOver) togglePause();
@@ -480,10 +506,14 @@ function openUserModal(editing) {
 
 function endGame() {
   gameOver = true;
-  addScore(getUsername(), score);
+  highlightIdx = addScore(getUsername(), score);
   cancelAnimationFrame(animId);
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
+  overlayRecord.textContent = highlightIdx >= 0 ? `¡Nuevo récord! #${highlightIdx + 1}` : '';
+  renderScoreboard();
+  overlayScoresEl.classList.remove('hidden');
+  overlayResetBtn.classList.remove('hidden');
   overlay.classList.remove('hidden');
   updatePauseBtn();
 }
@@ -537,6 +567,11 @@ function init() {
   level = startLevel;
   paused = false;
   gameOver = false;
+  highlightIdx = -1;
+  overlayRecord.textContent = '';
+  overlayScoresEl.classList.add('hidden');
+  overlayResetBtn.classList.add('hidden');
+  renderScoreboard();
   dropInterval = calcDropInterval();
   dropAccum = 0;
   lastTime = performance.now();
