@@ -52,6 +52,16 @@
           <canvas id="next-canvas" width="120" height="120"></canvas>
         </div>
 
+        <div class="panel-section">
+          <label class="label" for="skin-select">SKIN</label>
+          <select id="skin-select">
+            <option value="retro">Retro</option>
+            <option value="neon">Neon</option>
+            <option value="pastel">Pastel</option>
+            <option value="pixel">Pixel art</option>
+          </select>
+        </div>
+
         <div class="panel-section controls">
           <span class="label">CONTROLS</span>
           <ul>
@@ -67,6 +77,7 @@
       <section class="scoreboard">
         <span class="label">SCOREBOARD</span>
         <ol id="scoreboard"></ol>
+        <button id="reset-scores-btn" class="reset-btn" type="button">Resetear scoreboard</button>
       </section>
     </div>
 
@@ -74,7 +85,30 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <p id="overlay-record"></p>
+        <ol id="overlay-scores" class="score-list hidden"></ol>
         <button id="restart-btn">Reiniciar</button>
+        <button id="overlay-reset-btn" class="reset-btn hidden" type="button">Resetear scoreboard</button>
+      </div>
+    </div>
+
+    <div id="pause-menu" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+      <div class="overlay-box pause-box">
+        <p id="pause-title">PAUSA</p>
+        <button id="resume-btn" type="button" class="menu-btn">Reanudar</button>
+        <button id="menu-restart-btn" type="button" class="menu-btn">Reiniciar</button>
+        <button id="controls-btn" type="button" class="menu-btn secondary" aria-expanded="false" aria-controls="pause-controls">Ver controles</button>
+        <ul id="pause-controls" class="pause-controls hidden">
+          <li><kbd>←</kbd><kbd>→</kbd> mover</li>
+          <li><kbd>↑</kbd> / <kbd>X</kbd> rotar</li>
+          <li><kbd>↓</kbd> bajar</li>
+          <li><kbd>Space</kbd> caída</li>
+          <li><kbd>P</kbd> / <kbd>Esc</kbd> pausa</li>
+        </ul>
+        <label class="start-level">
+          <span class="label">NIVEL INICIAL</span>
+          <select id="start-level-select"></select>
+        </label>
       </div>
     </div>
   </div>

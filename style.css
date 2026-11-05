@@ -222,6 +222,27 @@ body {
   border-radius: 4px;
 }
 
+#skin-select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
+}
+
+#skin-select:focus {
+  border-color: var(--accent);
+}
+
+/* Fondo de los canvas según la skin (para pausa / game over) */
+[data-skin="neon"] #board,
+[data-skin="neon"] #next-canvas {
+  background: #000;
+}
+
 /* ---- Controles ---- */
 .controls ul {
   list-style: none;
@@ -303,6 +324,80 @@ kbd {
   background: var(--accent-hover);
 }
 
+/* ---- Menú de pausa ---- */
+#pause-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  color: var(--accent);
+}
+
+.pause-box {
+  gap: 10px;
+  min-width: 190px;
+}
+
+.menu-btn {
+  width: 100%;
+  background: var(--accent);
+  color: var(--accent-text);
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 1px;
+  transition: background 0.15s;
+}
+
+.menu-btn:hover {
+  background: var(--accent-hover);
+}
+
+.menu-btn.secondary {
+  background: var(--surface);
+  color: var(--accent);
+  border: 1px solid var(--border);
+}
+
+.pause-controls {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+
+.pause-controls.hidden {
+  display: none;
+}
+
+.pause-controls li {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.start-level {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.start-level select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
 /* ---- Scoreboard ---- */
 .scoreboard {
   width: 180px;
@@ -312,7 +407,7 @@ kbd {
   padding-top: 4px;
 }
 
-#scoreboard {
+#scoreboard, .score-list {
   list-style: none;
   counter-reset: pos;
   min-height: 120px;
@@ -325,7 +420,7 @@ kbd {
   border-radius: 4px;
 }
 
-#scoreboard li {
+#scoreboard li, .score-list li {
   counter-increment: pos;
   font-family: 'Courier New', Courier, monospace;
   font-size: 12px;
@@ -336,9 +431,61 @@ kbd {
   text-overflow: ellipsis;
 }
 
-#scoreboard li::before {
+#scoreboard li::before, .score-list li::before {
   content: counter(pos) ". ";
   color: var(--label);
+}
+
+#scoreboard li.highlight, .score-list li.highlight {
+  color: var(--accent-text);
+  background: var(--accent);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+#scoreboard li.highlight::before, .score-list li.highlight::before {
+  color: inherit;
+}
+
+.score-list {
+  min-height: 0;
+  max-height: 260px;
+  overflow-y: auto;
+  width: 200px;
+  gap: 3px;
+  text-align: left;
+  padding: 6px 8px;
+}
+
+.score-list.hidden,
+.reset-btn.hidden {
+  display: none;
+}
+
+#overlay-record {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+#overlay-record:empty {
+  display: none;
+}
+
+.reset-btn {
+  background: transparent;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.reset-btn:hover {
+  color: var(--danger);
+  border-color: var(--danger);
 }
 
 /* ---- Modal de usuario ---- */
