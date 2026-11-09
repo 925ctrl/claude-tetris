@@ -52,6 +52,11 @@
           <canvas id="next-canvas" width="120" height="120"></canvas>
         </div>
 
+        <div class="panel-section">
+          <label class="label" for="skin-select">SKIN</label>
+          <select id="skin-select"></select>
+        </div>
+
         <div class="panel-section controls">
           <span class="label">CONTROLS</span>
           <ul>
@@ -66,7 +71,8 @@
 
       <section class="scoreboard">
         <span class="label">SCOREBOARD</span>
-        <ol id="scoreboard"></ol>
+        <ol id="scoreboard" class="score-list"></ol>
+        <button type="button" class="reset-scores-btn">Resetear scoreboard</button>
       </section>
     </div>
 
@@ -74,7 +80,26 @@
       <div class="overlay-box">
         <p id="overlay-title">GAME OVER</p>
         <p id="overlay-score"></p>
+        <p id="overlay-rank"></p>
+        <ol id="overlay-scoreboard" class="score-list"></ol>
+        <button type="button" class="reset-scores-btn">Resetear scoreboard</button>
         <button id="restart-btn">Reiniciar</button>
+        <div id="pause-menu" class="pause-menu" hidden>
+          <button id="resume-btn" type="button">Reanudar</button>
+          <button id="pause-restart-btn" type="button">Reiniciar</button>
+          <label class="level-select">
+            <span class="label">NIVEL INICIAL</span>
+            <select id="start-level"></select>
+          </label>
+          <button id="controls-btn" type="button" aria-expanded="false" aria-controls="pause-controls">Ver controles</button>
+          <ul id="pause-controls" class="pause-controls" hidden>
+            <li><kbd>←</kbd><kbd>→</kbd> mover</li>
+            <li><kbd>↑</kbd> / <kbd>X</kbd> rotar</li>
+            <li><kbd>↓</kbd> bajar</li>
+            <li><kbd>Space</kbd> caída</li>
+            <li><kbd>P</kbd> / <kbd>Esc</kbd> pausa</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
