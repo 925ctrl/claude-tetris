@@ -63,7 +63,9 @@ const editUserBtn = document.getElementById('edit-user-btn');
 const userModal = document.getElementById('user-modal');
 const userForm = document.getElementById('user-form');
 const usernameInput = document.getElementById('username-input');
-const scoreboardEl = document.getElementById('scoreboard');
+const scoreLists = [document.getElementById('scoreboard'), document.getElementById('overlay-scoreboard')];
+const overlayRank = document.getElementById('overlay-rank');
+const resetBtns = document.querySelectorAll('.reset-scores-btn');
 
 const MAX_NAME = 12;
 const MAX_SCORES = 10;
@@ -347,27 +349,41 @@ function loadScores() {
   }
 }
 
+// Devuelve la posición (0-based) en el top, o -1 si no entra.
 function addScore(name, value) {
-  if (!name || value < 1) return;
+  if (!name || value < 1) return -1;
   const scores = loadScores();
   // Inserta antes del primer puntaje estrictamente menor: un empate queda debajo
   let idx = scores.findIndex(e => e.score < value);
   if (idx === -1) {
-    if (scores.length >= MAX_SCORES) return;
+    if (scores.length >= MAX_SCORES) return -1;
     idx = scores.length;
   }
   scores.splice(idx, 0, { name, score: value });
   try { localStorage.setItem('scoreboard', JSON.stringify(scores.slice(0, MAX_SCORES))); } catch (e) {}
-  renderScoreboard();
+  renderScoreboard(idx);
+  return idx;
 }
 
-function renderScoreboard() {
-  scoreboardEl.textContent = '';
-  for (const e of loadScores()) {
-    const li = document.createElement('li');
-    li.textContent = `${e.name} - ${e.score}`;
-    scoreboardEl.appendChild(li);
+// Pinta el top en el panel y en el overlay; `highlight` marca la fila recién añadida.
+function renderScoreboard(highlight = -1) {
+  const scores = loadScores();
+  for (const list of scoreLists) {
+    list.textContent = '';
+    scores.forEach((e, i) => {
+      const li = document.createElement('li');
+      li.textContent = `${e.name} - ${e.score}`;
+      if (i === highlight) li.className = 'highlight';
+      list.appendChild(li);
+    });
   }
+}
+
+function resetScores() {
+  if (!confirm('¿Borrar todo el scoreboard?')) return;
+  try { localStorage.removeItem('scoreboard'); } catch (e) {}
+  overlayRank.textContent = '';
+  renderScoreboard();
 }
 
 function openUserModal(editing) {
@@ -381,12 +397,13 @@ function openUserModal(editing) {
 
 function endGame() {
   gameOver = true;
-  addScore(getUsername(), score);
+  const rank = addScore(getUsername(), score);
   cancelAnimationFrame(animId);
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
   pauseMenu.hidden = true;
   restartBtn.hidden = false;
+  overlayRank.textContent = rank >= 0 ? `¡Entraste al top! Puesto #${rank + 1}` : '';
   overlay.classList.remove('hidden');
   updatePauseBtn();
 }
@@ -450,6 +467,7 @@ function init() {
   next = randomPiece();
   spawn();
   updateHUD();
+  renderScoreboard();
   overlay.classList.add('hidden');
   pauseMenu.hidden = true;
   restartBtn.hidden = false;
@@ -498,6 +516,7 @@ for (let i = 1; i <= MAX_START_LEVEL; i++) startLevelSelect.add(new Option(i, i)
 startLevelSelect.addEventListener('change', () => {
   startLevel = Number(startLevelSelect.value);
 });
+resetBtns.forEach(b => b.addEventListener('click', resetScores));
 
 pauseBtn.addEventListener('click', () => {
   togglePause();

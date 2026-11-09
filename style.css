@@ -387,7 +387,8 @@ kbd {
   padding-top: 4px;
 }
 
-#scoreboard {
+/* lista compartida por el panel y el overlay */
+.score-list {
   list-style: none;
   counter-reset: pos;
   min-height: 120px;
@@ -400,7 +401,12 @@ kbd {
   border-radius: 4px;
 }
 
-#scoreboard li {
+#overlay-scoreboard {
+  min-height: 0;
+  min-width: 180px;
+}
+
+.score-list li {
   counter-increment: pos;
   font-family: 'Courier New', Courier, monospace;
   font-size: 12px;
@@ -411,7 +417,39 @@ kbd {
   text-overflow: ellipsis;
 }
 
-#scoreboard li::before {
+.score-list li.highlight {
+  color: var(--accent-text);
+  background: var(--accent);
+  border-radius: 3px;
+  padding: 0 4px;
+}
+
+#overlay-rank {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+#overlay-rank:empty {
+  display: none;
+}
+
+.reset-scores-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.reset-scores-btn:hover {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.score-list li::before {
   content: counter(pos) ". ";
   color: var(--label);
 }
