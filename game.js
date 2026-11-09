@@ -52,6 +52,12 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const pauseBtn = document.getElementById('pause-btn');
+const pauseMenu = document.getElementById('pause-menu');
+const resumeBtn = document.getElementById('resume-btn');
+const pauseRestartBtn = document.getElementById('pause-restart-btn');
+const controlsBtn = document.getElementById('controls-btn');
+const pauseControls = document.getElementById('pause-controls');
+const startLevelSelect = document.getElementById('start-level');
 const themeToggle =document.getElementById('theme-toggle');
 const editUserBtn = document.getElementById('edit-user-btn');
 const userModal = document.getElementById('user-modal');
@@ -61,6 +67,8 @@ const scoreboardEl = document.getElementById('scoreboard');
 
 const MAX_NAME = 12;
 const MAX_SCORES = 10;
+const MAX_START_LEVEL = 10;
+let startLevel = 1; // nivel con el que empieza la próxima partida
 let modalOpen = false;
 
 let gridColor = '#22222e';
@@ -133,8 +141,7 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + 1;
-    dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    setLevel(startLevel + Math.floor(lines / 10));
     updateHUD();
   }
 }
@@ -201,6 +208,11 @@ function spawn() {
     endGame();
   }
   drawNext();
+}
+
+function setLevel(n) {
+  level = n;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
 }
 
 function updateHUD() {
@@ -373,6 +385,8 @@ function endGame() {
   cancelAnimationFrame(animId);
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
+  pauseMenu.hidden = true;
+  restartBtn.hidden = false;
   overlay.classList.remove('hidden');
   updatePauseBtn();
 }
@@ -390,13 +404,20 @@ function togglePause() {
   updatePauseBtn();
   if (!paused) {
     overlay.classList.add('hidden');
+    if (overlay.contains(document.activeElement)) document.activeElement.blur();
     lastTime = performance.now();
     loop(lastTime);
   } else {
     cancelAnimationFrame(animId);
     overlayTitle.textContent = 'PAUSA';
     overlayScore.textContent = '';
+    restartBtn.hidden = true;
+    pauseMenu.hidden = false;
+    pauseControls.hidden = true;
+    controlsBtn.setAttribute('aria-expanded', 'false');
+    startLevelSelect.value = startLevel;
     overlay.classList.remove('hidden');
+    resumeBtn.focus();
   }
 }
 
@@ -421,16 +442,18 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  setLevel(startLevel);
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
   dropAccum = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  pauseMenu.hidden = true;
+  restartBtn.hidden = false;
+  if (overlay.contains(document.activeElement)) document.activeElement.blur();
   updatePauseBtn();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
@@ -438,7 +461,7 @@ function init() {
 
 document.addEventListener('keydown', e => {
   if (modalOpen) return;
-  if (e.code === 'KeyP') { togglePause(); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') { togglePause(); return; }
   if (paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
@@ -463,6 +486,18 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+pauseRestartBtn.addEventListener('click', init);
+resumeBtn.addEventListener('click', togglePause);
+
+controlsBtn.addEventListener('click', () => {
+  pauseControls.hidden = !pauseControls.hidden;
+  controlsBtn.setAttribute('aria-expanded', String(!pauseControls.hidden));
+});
+
+for (let i = 1; i <= MAX_START_LEVEL; i++) startLevelSelect.add(new Option(i, i));
+startLevelSelect.addEventListener('change', () => {
+  startLevel = Number(startLevelSelect.value);
+});
 
 pauseBtn.addEventListener('click', () => {
   togglePause();
