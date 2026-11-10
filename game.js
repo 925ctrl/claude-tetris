@@ -4,20 +4,6 @@ const COLS = 10;
 const ROWS = 20;
 const BLOCK = 30;
 
-const COLORS = [
-  null,
-  '#4dd0e1', // I - cyan
-  '#ffd54f', // O - yellow
-  '#ba68c8', // T - purple
-  '#81c784', // S - green
-  '#e57373', // Z - red
-  '#7986cb', // J - indigo
-  '#ffb74d', // L - orange
-  '#ef5350', // Bomba - rojo
-  '#ffee58', // Rayo (fila) - amarillo
-  '#40c4ff', // Rayo 2 (columna) - azul
-];
-
 const PIECES = [
   null,
   [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]], // I
@@ -52,12 +38,23 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 const pauseBtn = document.getElementById('pause-btn');
+const pauseMenu = document.getElementById('pause-menu');
+const resumeBtn = document.getElementById('resume-btn');
+const menuRestartBtn = document.getElementById('menu-restart-btn');
+const controlsBtn = document.getElementById('controls-btn');
+const pauseControls = document.getElementById('pause-controls');
+const startLevelSelect = document.getElementById('start-level-select');
 const themeToggle =document.getElementById('theme-toggle');
 const editUserBtn = document.getElementById('edit-user-btn');
 const userModal = document.getElementById('user-modal');
 const userForm = document.getElementById('user-form');
 const usernameInput = document.getElementById('username-input');
 const scoreboardEl = document.getElementById('scoreboard');
+const skinSelect = document.getElementById('skin-select');
+const overlayScoresEl = document.getElementById('overlay-scores');
+const overlayRecord = document.getElementById('overlay-record');
+const resetScoresBtn = document.getElementById('reset-scores-btn');
+const overlayResetBtn = document.getElementById('overlay-reset-btn');
 
 const MAX_NAME = 12;
 const MAX_SCORES = 10;
@@ -66,6 +63,8 @@ let modalOpen = false;
 let gridColor = '#22222e';
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
+let startLevel = 1;     // nivel inicial aplicado a la partida en curso
+let nextStartLevel = 1; // nivel elegido en el menú, se aplica en el próximo init()
 
 function createBoard() {
   return Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
@@ -133,8 +132,8 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + 1;
-    dropInterval = Math.max(100, 1000 - (level - 1) * 90);
+    level = startLevel + Math.floor(lines / 10);
+    dropInterval = calcDropInterval();
     updateHUD();
   }
 }
@@ -209,17 +208,103 @@ function updateHUD() {
   levelEl.textContent = level;
 }
 
-function drawBlock(context, x, y, colorIndex, size, alpha) {
-  if (!colorIndex) return;
-  const color = COLORS[colorIndex];
-  context.globalAlpha = alpha ?? 1;
+// ---- Skins ----
+// palette: colores por índice (1-7 piezas, 8-10 power-ups). bg: fondo del canvas (null = CSS --surface).
+// grid: color de rejilla (null = el del tema). draw: función de dibujo del bloque.
+function roundedRectPath(context, x, y, w, h, r) {
+  context.beginPath();
+  context.moveTo(x + r, y);
+  context.arcTo(x + w, y, x + w, y + h, r);
+  context.arcTo(x + w, y + h, x, y + h, r);
+  context.arcTo(x, y + h, x, y, r);
+  context.arcTo(x, y, x + w, y, r);
+  context.closePath();
+}
+
+function drawBlockRetro(context, x, y, color, size) {
   context.fillStyle = color;
   context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
   // highlight
   context.fillStyle = 'rgba(255,255,255,0.12)';
   context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+}
+
+function drawBlockNeon(context, x, y, color, size, colorIndex) {
+  const px = x * size + 2, py = y * size + 2, s = size - 4;
+  context.shadowColor = color;
+  context.shadowBlur = size * 0.4;
+  context.fillStyle = colorIndex >= BOMB ? color : '#0a0a0a';
+  context.fillRect(px, py, s, s);
+  context.strokeStyle = color;
+  context.lineWidth = 2;
+  context.strokeRect(px, py, s, s);
+  context.shadowBlur = 0;
+  context.shadowColor = 'transparent';
+}
+
+function drawBlockPastel(context, x, y, color, size) {
+  const px = x * size + 1.5, py = y * size + 1.5, s = size - 3;
+  roundedRectPath(context, px, py, s, s, size * 0.28);
+  context.fillStyle = color;
+  context.fill();
+  context.strokeStyle = 'rgba(255,255,255,0.7)';
+  context.lineWidth = 1.5;
+  context.stroke();
+  // brillo suave
+  context.fillStyle = 'rgba(255,255,255,0.35)';
+  roundedRectPath(context, px + s * 0.18, py + s * 0.12, s * 0.5, s * 0.16, s * 0.08);
+  context.fill();
+}
+
+function drawBlockPixel(context, x, y, color, size) {
+  const px = x * size + 1, py = y * size + 1, s = size - 2;
+  context.fillStyle = color;
+  context.fillRect(px, py, s, s);
+  // textura: sub-cuadrículas 5x5 claras y oscuras en patrón de tablero
+  const n = 5, cell = s / n;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      if ((i + j) % 2) continue;
+      context.fillStyle = (i * 3 + j) % 4 === 0 ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.18)';
+      context.fillRect(px + i * cell, py + j * cell, cell, cell);
+    }
+  }
+  context.strokeStyle = 'rgba(0,0,0,0.65)';
+  context.lineWidth = 2;
+  context.strokeRect(px + 1, py + 1, s - 2, s - 2);
+}
+
+const SKINS = {
+  retro: {
+    palette: [null, '#4dd0e1', '#ffd54f', '#ba68c8', '#81c784', '#e57373', '#7986cb', '#ffb74d', '#ef5350', '#ffee58', '#40c4ff'],
+    bg: null, grid: null, draw: drawBlockRetro,
+  },
+  neon: {
+    palette: [null, '#00fff7', '#ffee00', '#d500f9', '#39ff14', '#ff1744', '#2979ff', '#ff9100', '#ff3d00', '#f4ff3a', '#18ffff'],
+    bg: '#000000', grid: '#1a1a2a', draw: drawBlockNeon,
+  },
+  pastel: {
+    palette: [null, '#a8e6ef', '#fff3b0', '#d7b8f3', '#b8e6c1', '#f7b6b6', '#b5bdf0', '#ffd6a5', '#ff9e9e', '#fff07a', '#8fd8ff'],
+    bg: null, grid: null, draw: drawBlockPastel,
+  },
+  pixel: {
+    palette: [null, '#29b6c5', '#e6b800', '#9c3fb0', '#43a047', '#d32f2f', '#3f51b5', '#ef8a00', '#e53935', '#fdd835', '#039be5'],
+    bg: null, grid: null, draw: drawBlockPixel,
+  },
+};
+let skinName = 'retro';
+
+function drawBlock(context, x, y, colorIndex, size, alpha) {
+  if (!colorIndex) return;
+  const skin = SKINS[skinName];
+  context.save();
+  context.globalAlpha = alpha ?? 1;
+  skin.draw(context, x, y, skin.palette[colorIndex], size, colorIndex);
   if (colorIndex >= BOMB) drawPowerUpIcon(context, x, y, colorIndex, size);
+  context.restore();
   context.globalAlpha = 1;
+  context.shadowBlur = 0;
+  context.shadowColor = 'transparent';
 }
 
 // Icono vectorial oscuro sobre el bloque (respeta el globalAlpha del ghost).
@@ -262,8 +347,17 @@ function drawPowerUpIcon(context, x, y, colorIndex, size) {
   context.restore();
 }
 
+function paintBackground(context, cv) {
+  context.clearRect(0, 0, cv.width, cv.height);
+  const bg = SKINS[skinName].bg;
+  if (bg) {
+    context.fillStyle = bg;
+    context.fillRect(0, 0, cv.width, cv.height);
+  }
+}
+
 function drawGrid() {
-  ctx.strokeStyle = gridColor;
+  ctx.strokeStyle = SKINS[skinName].grid || gridColor;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -280,7 +374,7 @@ function drawGrid() {
 }
 
 function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  paintBackground(ctx, canvas);
   drawGrid();
 
   // board
@@ -303,7 +397,7 @@ function draw() {
 
 function drawNext() {
   const NB = 30;
-  nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
+  paintBackground(nextCtx, nextCanvas);
   const shape = next.shape;
   const offX = Math.floor((4 - shape[0].length) / 2);
   const offY = Math.floor((4 - shape.length) / 2);
@@ -336,27 +430,70 @@ function loadScores() {
 }
 
 function addScore(name, value) {
-  if (!name || value < 1) return;
+  if (!name || value < 1) return -1;
   const scores = loadScores();
   // Inserta antes del primer puntaje estrictamente menor: un empate queda debajo
   let idx = scores.findIndex(e => e.score < value);
   if (idx === -1) {
-    if (scores.length >= MAX_SCORES) return;
+    if (scores.length >= MAX_SCORES) return -1;
     idx = scores.length;
   }
   scores.splice(idx, 0, { name, score: value });
   try { localStorage.setItem('scoreboard', JSON.stringify(scores.slice(0, MAX_SCORES))); } catch (e) {}
-  renderScoreboard();
+  return idx < MAX_SCORES ? idx : -1;
+}
+
+// Índice de la última entrada insertada (se resalta hasta que empiece otra partida)
+let highlightIdx = -1;
+
+function renderScores(el, highlight = -1) {
+  el.textContent = '';
+  loadScores().forEach((e, i) => {
+    const li = document.createElement('li');
+    li.textContent = `${e.name} - ${e.score}`;
+    if (i === highlight) li.className = 'highlight';
+    el.appendChild(li);
+  });
 }
 
 function renderScoreboard() {
-  scoreboardEl.textContent = '';
-  for (const e of loadScores()) {
-    const li = document.createElement('li');
-    li.textContent = `${e.name} - ${e.score}`;
-    scoreboardEl.appendChild(li);
-  }
+  renderScores(scoreboardEl, highlightIdx);
+  renderScores(overlayScoresEl, highlightIdx);
 }
+
+function calcDropInterval() {
+  return Math.max(100, 1000 - (level - 1) * 90);
+}
+
+function loadStartLevel() {
+  let v = 1;
+  try {
+    const n = parseInt(localStorage.getItem('startLevel'), 10);
+    if (Number.isInteger(n) && n >= 1 && n <= 10) v = n;
+  } catch (e) {}
+  return v;
+}
+
+for (let i = 1; i <= 10; i++) {
+  const opt = document.createElement('option');
+  opt.value = opt.textContent = i;
+  startLevelSelect.appendChild(opt);
+}
+nextStartLevel = loadStartLevel();
+startLevelSelect.value = nextStartLevel;
+
+function resetScores(btn) {
+  if (confirm('¿Resetear el scoreboard? Esta acción no se puede deshacer.')) {
+    try { localStorage.removeItem('scoreboard'); } catch (e) {}
+    highlightIdx = -1;
+    overlayRecord.textContent = '';
+    renderScoreboard();
+  }
+  btn.blur();
+}
+
+resetScoresBtn.addEventListener('click', () => resetScores(resetScoresBtn));
+overlayResetBtn.addEventListener('click', () => resetScores(overlayResetBtn));
 
 function openUserModal(editing) {
   modalOpen = true;
@@ -369,10 +506,14 @@ function openUserModal(editing) {
 
 function endGame() {
   gameOver = true;
-  addScore(getUsername(), score);
+  highlightIdx = addScore(getUsername(), score);
   cancelAnimationFrame(animId);
   overlayTitle.textContent = 'GAME OVER';
   overlayScore.textContent = `Puntuación: ${score.toLocaleString()}`;
+  overlayRecord.textContent = highlightIdx >= 0 ? `¡Nuevo récord! #${highlightIdx + 1}` : '';
+  renderScoreboard();
+  overlayScoresEl.classList.remove('hidden');
+  overlayResetBtn.classList.remove('hidden');
   overlay.classList.remove('hidden');
   updatePauseBtn();
 }
@@ -389,14 +530,15 @@ function togglePause() {
   paused = !paused;
   updatePauseBtn();
   if (!paused) {
-    overlay.classList.add('hidden');
+    pauseMenu.classList.add('hidden');
     lastTime = performance.now();
     loop(lastTime);
   } else {
     cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
+    pauseControls.classList.add('hidden');
+    controlsBtn.setAttribute('aria-expanded', 'false');
+    pauseMenu.classList.remove('hidden');
+    resumeBtn.focus();
   }
 }
 
@@ -421,16 +563,23 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  startLevel = nextStartLevel;
+  level = startLevel;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  highlightIdx = -1;
+  overlayRecord.textContent = '';
+  overlayScoresEl.classList.add('hidden');
+  overlayResetBtn.classList.add('hidden');
+  renderScoreboard();
+  dropInterval = calcDropInterval();
   dropAccum = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  pauseMenu.classList.add('hidden');
   updatePauseBtn();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
@@ -438,8 +587,12 @@ function init() {
 
 document.addEventListener('keydown', e => {
   if (modalOpen) return;
-  if (e.code === 'KeyP') { togglePause(); return; }
-  if (paused || gameOver) return;
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    if (!e.repeat) togglePause();
+    return;
+  }
+  if (paused || gameOver) return; // menú abierto: no mover ni caer (Space/Enter activan botones del menú)
+  if (e.repeat && e.code === 'Space') return;
   switch (e.code) {
     case 'ArrowLeft':
       if (!collide(current.shape, current.x - 1, current.y)) current.x--;
@@ -463,6 +616,31 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+
+resumeBtn.addEventListener('click', () => {
+  resumeBtn.blur();
+  if (paused) togglePause();
+});
+
+menuRestartBtn.addEventListener('click', () => {
+  menuRestartBtn.blur();
+  init();
+});
+
+controlsBtn.addEventListener('click', () => {
+  const hide = !pauseControls.classList.contains('hidden');
+  pauseControls.classList.toggle('hidden', hide);
+  controlsBtn.setAttribute('aria-expanded', String(!hide));
+  controlsBtn.blur();
+});
+
+startLevelSelect.addEventListener('change', () => {
+  const n = parseInt(startLevelSelect.value, 10);
+  if (!(n >= 1 && n <= 10)) return;
+  nextStartLevel = n;
+  try { localStorage.setItem('startLevel', String(n)); } catch (e) {}
+  startLevelSelect.blur();
+});
 
 pauseBtn.addEventListener('click', () => {
   togglePause();
@@ -502,6 +680,29 @@ themeToggle.addEventListener('click', () => {
 });
 
 applyTheme(document.documentElement.dataset.theme === 'light' ? 'light' : 'dark', false);
+
+function applySkin(name, save) {
+  if (!Object.prototype.hasOwnProperty.call(SKINS, name)) name = 'retro';
+  skinName = name;
+  document.documentElement.dataset.skin = name;
+  skinSelect.value = name;
+  if (save) {
+    try { localStorage.setItem('skin', name); } catch (e) {}
+  }
+  if (current) draw();
+  if (next) drawNext();
+}
+
+skinSelect.addEventListener('change', () => {
+  applySkin(skinSelect.value, true);
+  skinSelect.blur(); // evita que las flechas cambien el selector durante el juego
+});
+
+(function () {
+  let saved = null;
+  try { saved = localStorage.getItem('skin'); } catch (e) {}
+  applySkin(saved, false);
+})();
 
 renderScoreboard();
 
